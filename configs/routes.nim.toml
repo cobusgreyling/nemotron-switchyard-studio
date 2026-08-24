@@ -1,0 +1,49 @@
+# Official NVIDIA NeMo Switchyard deployment (native TOML).
+# Secrets stay in the environment — this file only names NVIDIA_API_KEY.
+#
+#   export NVIDIA_API_KEY=nvapi-...
+#   python3 run_switchyard.py
+#
+# Clients talk to http://127.0.0.1:4000 with model id "switchyard".
+
+schema_version = 1
+
+[llm_clients.nvidia]
+format = "openai_chat"
+base_url = "https://integrate.api.nvidia.com/v1"
+api_key_env = "NVIDIA_API_KEY"
+
+[targets.classifier]
+id = "nvidia/nemotron-3-nano-30b-a3b"
+llm_client = "nvidia"
+
+[targets.strong]
+id = "nvidia/nemotron-3.5-lightning-30b-a3b"
+llm_client = "nvidia"
+
+[targets.weak]
+id = "nvidia/nemotron-mini-4b-instruct"
+llm_client = "nvidia"
+
+[routes.smart]
+id = "switchyard"
+type = "llm_classifier"
+mode = "capability"
+classifier_target = "classifier"
+strong_target = "strong"
+weak_target = "weak"
+base_threshold = 0.5
+
+[routes.stage]
+id = "agent-stage"
+type = "stage_router"
+capable_target = "strong"
+efficient_target = "weak"
+picker = "efficient_first"
+confidence_threshold = 0.5
+recent_turn_window = 3
+
+[routes.lightning]
+id = "lightning"
+type = "passthrough"
+target = "strong"

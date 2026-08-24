@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nemotron Switchyard Studio — Fine-tune · Route · GTC Berlin</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <img class="banner" src="/static/header.jpg" alt="A railroad switchyard at night with NVIDIA-green signal lights" />
+    <div class="hero-copy">
+      <p class="eyebrow">NVIDIA Nemotron · NeMo Switchyard · #NVIDIAGTC</p>
+      <h1>Switchyard Studio</h1>
+      <p class="tagline">
+        Fine-tune a small specialist, then put <strong>Switchyard</strong> in front of
+        every incoming query — plan up, execute down, PII stays local.
+      </p>
+      <div class="badges">
+        <span class="badge">Nemotron 3.5 Lightning NIM</span>
+        <span class="badge">LoRA SFT · small student</span>
+        <span class="badge">Open models</span>
+        <span class="badge" id="liveBadge">checking…</span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab on" data-tab="yard" role="tab" aria-selected="true">Switchyard</button>
+    <button class="tab" data-tab="finetune" role="tab" aria-selected="false">Fine-tune</button>
+    <button class="tab" data-tab="compare" role="tab" aria-selected="false">Before / after</button>
+  </nav>
+
+  <!-- ═══════════════ SWITCHYARD ═══════════════ -->
+  <section id="yard" class="view on">
+    <aside class="where" id="whereBanner">
+      <div>
+        <strong>Where this runs:</strong>
+        <span id="whereHere">FastAPI in-process classifier · 127.0.0.1:7878</span>
+      </div>
+      <div>
+        <strong>Official Switchyard:</strong>
+        <span id="whereOfficial">switchyard-server not installed (would be :4000)</span>
+      </div>
+      <div>
+        <strong>NIM:</strong>
+        <span id="whereNim">inference only — does not route</span>
+      </div>
+    </aside>
+
+    <div class="lede-row">
+      <p class="lede">
+        Incoming queries are <em>not one model</em>. This lab’s router (Python, in this process)
+        throws the switch the way <a href="https://github.com/NVIDIA-NeMo/Switchyard" target="_blank" rel="noopener">NeMo Switchyard</a>
+        would: <strong class="c-front">frontier</strong> for plans,
+        <strong class="c-light">Lightning</strong> for execute,
+        <strong class="c-local">local</strong> for PII.
+      </p>
+    </div>
+
+    <div class="composer panel">
+      <label>Strategy
+        <select id="strategy">
+          <option value="stage">Stage router (agent steps)</option>
+          <option value="content" selected>Content classifier</option>
+          <option value="policy">Plan / execute policy</option>
+        </select>
+      </label>
+      <label class="grow">Incoming query
+        <textarea id="queryInput" rows="2" placeholder="Type a query — or click a sample chip…"></textarea>
+      </label>
+      <div class="btn-col">
+        <button id="sendBtn" class="primary">Send into the yard</button>
+        <button id="sessionBtn" type="button">Run 6-step agent</button>
+        <label class="toggle">
+          <input type="checkbox" id="liveToggle" checked />
+          Live NIM
+        </label>
+      </div>
+    </div>
+    <div class="chips" id="chips"></div>
+
+    <div class="yard-wrap panel">
+      <svg id="yardSvg" viewBox="0 0 1100 460" role="img" aria-label="Switchyard routing diagram">
+        <defs>
+          <linearGradient id="gFront" x1="0" x2="1">
+            <stop offset="0%" stop-color="#ff8c42" stop-opacity="0.2" />
+            <stop offset="100%" stop-color="#ff8c42" />
+          </linearGradient>
+          <linearGradient id="gLight" x1="0" x2="1">
+            <stop offset="0%" stop-color="#76b900" stop-opacity="0.2" />
+            <stop offset="100%" stop-color="#76b900" />
+          </linearGradient>
+          <linearGradient id="gLocal" x1="0" x2="1">
+            <stop offset="0%" stop-color="#5ec8ff" stop-opacity="0.2" />
+            <stop offset="100%" stop-color="#5ec8ff" />
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3.5" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+
+        <!-- sleepers / ground -->
+        <rect x="0" y="0" width="1100" height="460" fill="none" />
+
+        <text class="hop-label" x="40" y="30">1 · CLIENT</text>
+        <text class="hop-label hop-mid" x="390" y="30">2 · CLASSIFY  src/router.py</text>
+        <text class="hop-label hop-end" x="1040" y="30" text-anchor="end">3 · BACKEND</text>
+
+        <!-- ingress rail -->
+        <path id="pathIn" class="rail" d="M 40 230 C 160 230, 240 230, 390 230" />
+
+        <!-- three outgoing tracks -->
+        <path id="pathFrontier" class="rail rail-front" d="M 470 230 C 620 230, 720 90, 1040 78" />
+        <path id="pathLightning" class="rail rail-light" d="M 470 230 C 640 230, 780 230, 1040 230" />
+        <path id="pathLocal" class="rail rail-local" d="M 470 230 C 620 230, 720 370, 1040 382" />
+
+        <!-- switch diamond -->
+        <g id="tower" transform="translate(430,230)">
+          <polygon class="diamond" points="0,-52 52,0 0,52 -52,0" />
+          <circle class="hub" r="18" />
+          <text class="hub-label" y="4">SY</text>
+        </g>
+
+        <text class="svg-caption" x="40" y="210">INCOMING</text>
+        <text class="svg-caption cap-front" x="1040" y="58" text-anchor="end">FRONTIER · ULTRA</text>
+        <text class="svg-caption cap-light" x="1040" y="210" text-anchor="end">LIGHTNING · EXECUTE</text>
+        <text class="svg-caption cap-local" x="1040" y="362" text-anchor="end">LOCAL · PRIVATE</text>
+
+        <circle id="packet" class="packet" r="8" cx="40" cy="230" visibility="hidden" />
+      </svg>
+
+      <div class="bays">
+        <article class="bay" data-track="frontier">
+          <h3>Frontier</h3>
+          <p class="bay-model" id="bayFrontierModel">nemotron-3.5-lightning · think</p>
+          <p class="bay-reason" id="bayFrontierReason">Plan, architecture, hard verify.</p>
+        </article>
+        <article class="bay accent" data-track="lightning">
+          <h3>Lightning</h3>
+          <p class="bay-model" id="bayLightningModel">nemotron-3.5-lightning</p>
+          <p class="bay-reason" id="bayLightningReason">Tool calls, tickets, format, volume.</p>
+        </article>
+        <article class="bay" data-track="local">
+          <h3>Local</h3>
+          <p class="bay-model" id="bayLocalModel">local adapter</p>
+          <p class="bay-reason" id="bayLocalReason">PII / restricted — never hits NIM.</p>
+        </article>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <section class="panel decision">
+        <h2>Last throw</h2>
+        <div class="stat-grid" id="decisionStats">
+          <div class="stat"><span class="label">Track</span><span class="value" id="dTrack">—</span></div>
+          <div class="stat"><span class="label">Score</span><span class="value" id="dScore">—</span></div>
+          <div class="stat accent"><span class="label">Saved vs frontier</span><span class="value" id="dSave">—</span></div>
+          <div class="stat"><span class="label">Latency</span><span class="value" id="dMs">—</span></div>
+        </div>
+        <p class="reason" id="dReason">Send a query to see the switch throw.</p>
+        <pre class="reply" id="dReply" hidden></pre>
+      </section>
+      <section class="panel feed">
+        <h2>Traffic log</h2>
+        <p class="mix" id="mixLine">frontier 0 · lightning 0 · local 0</p>
+        <ol id="feed" class="feed-list"></ol>
+      </section>
+    </div>
+  </section>
+
+  <!-- ═══════════════ FINE-TUNE ═══════════════ -->
+  <section id="finetune" class="view">
+    <p class="lede">
+      NIM is inference-only — you cannot attach LoRA to the hosted Lightning endpoint.
+      This Mac trains a <strong>small open-weight student</strong> with Lightning’s SFT
+      recipe: assistant-only loss, frozen test, rank-8 LoRA. Same contract you’d ship
+      on Nemotron 3.5 Lightning with an A100 / NeMo AutoModel.
+    </p>
+    <div class="grid-2">
+      <section class="panel">
+        <h2>LoRA config</h2>
+        <label>Student model
+          <select id="studentSelect"></select>
+        </label>
+        <p class="hint" id="studentHint"></p>
+        <div class="knobs">
+          <label>Steps <input id="maxSteps" type="number" min="4" max="80" value="24" /></label>
+          <label>LoRA r <input id="loraR" type="number" min="4" max="32" value="8" /></label>
+          <label>LR <input id="lr" type="text" value="2e-4" /></label>
+        </div>
+        <div class="btn-row">
+          <button id="trainBtn" class="primary">Start LoRA SFT</button>
+          <span class="hint" id="trainHint">device…</span>
+        </div>
+        <div class="progress"><div id="trainBar"></div></div>
+        <canvas id="lossCanvas" width="640" height="140" aria-label="Training loss"></canvas>
+        <pre class="log" id="trainLog">Ready.</pre>
+      </section>
+      <section class="panel">
+        <h2>Train split · 8 cards</h2>
+        <p class="hint">Loss is on the card tokens only. Test tickets never enter the trainer.</p>
+        <div id="trainTable" class="table"></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ═══════════════ COMPARE ═══════════════ -->
+  <section id="compare" class="view">
+    <p class="lede">
+      Frozen test the trainer never saw. Stock 0.5B writes apologies.
+      After SFT it emits one parseable <code>&lt;&lt;TICKET&gt;&gt;</code> card.
+      NIM Lightning is the unfine-tuned Nemotron baseline (thinking off).
+    </p>
+    <div class="panel composer">
+      <label>Frozen test ticket
+        <select id="testSelect"></select>
+      </label>
+      <button id="compareBtn" class="primary">Run before / after</button>
+      <p class="hint" id="compareHint"></p>
+    </div>
+    <div class="columns" id="compareCols"></div>
+  </section>
+
+  <footer>
+    Built with open models for the
+    <a href="https://developer.nvidia.com/gtc-golden-ticket-contest" target="_blank" rel="noopener">NVIDIA GTC Berlin Golden Ticket</a>
+    · #NVIDIAGTC ·
+    <a href="https://github.com/NVIDIA-NeMo/Switchyard" target="_blank" rel="noopener">NeMo Switchyard</a>
+    ·
+    <a href="https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b" target="_blank" rel="noopener">Nemotron 3.5 Lightning NIM</a>
+    · Educational kit, not an official NVIDIA product page
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
