@@ -13,7 +13,7 @@
 
 ## What this is
 
-Two things the contest page asked for — *what you're building with open models*:
+
 
 1. **A web UI to fine-tune a small model** with the Nemotron Lightning SFT recipe (assistant-only LoRA, frozen test, rank-8).
 2. **A live visual of how [NeMo Switchyard](https://github.com/NVIDIA-NeMo/Switchyard) throws incoming queries** onto three tracks.
